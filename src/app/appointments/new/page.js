@@ -1,24 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Clock, User, FileText, CheckCircle2, ArrowRight } from "lucide-react";
+import { Calendar, Clock, User, CheckCircle2, ArrowRight, Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiClient } from "@/service/api";
+import { useAuth } from "@/lib/AuthContext";
+import { toast } from "react-toastify";
+import Link from "next/link";
 
 export default function AppointmentBookingPage() {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [doctors, setDoctors] = useState([]);
+  const [formData, setFormData] = useState({
+    doctorEmail: "",
+    appointmentDate: "",
+    patientEmail: "",
+  });
 
-  const timeSlots = ["09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM"];
+  useEffect(() => {
+    fetchDoctors();
+    if (user && user.role === "USER") {
+      setFormData(prev => ({ ...prev, patientEmail: user.email }));
+    }
+  }, [user]);
 
-  const handleNext = () => setStep(step + 1);
+  const fetchDoctors = async () => {
+    try {
+      const res = await apiClient("/doctors");
+      if (res.code === 200) setDoctors(res.data);
+    } catch (error) {
+      console.error("Error fetching doctors:", error);
+    }
+  };
+
+  const handleBooking = async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient("/appointments", "POST", formData);
+      if (res.code === 201) {
+        setStep(3);
+      } else {
+        toast.error(res.message || "Booking failed");
+      }
+    } catch (error) {
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-3xl mx-auto px-8 py-12">
       <div className="flex items-center justify-between mb-16 relative">
         <div className="absolute top-1/2 left-0 w-full h-1 bg-zinc-100 -translate-y-1/2 -z-10" />
-        <StepIcon num={1} active={step >= 1} current={step === 1} label="Schedule" />
+        <StepIcon num={1} active={step >= 1} current={step === 1} label="Selection" />
         <StepIcon num={2} active={step >= 2} current={step === 2} label="Details" />
         <StepIcon num={3} active={step >= 3} current={step === 3} label="Confirm" />
       </div>
@@ -26,39 +64,35 @@ export default function AppointmentBookingPage() {
       <div className="bg-white rounded-[40px] border border-zinc-100 shadow-2xl p-10 overflow-hidden">
         {step === 1 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-            <h2 className="text-3xl font-bold text-zinc-900">Choose a date & time</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
+            <h2 className="text-3xl font-bold text-zinc-900">Select Doctor & Date</h2>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Select Doctor</label>
+                <select 
+                  value={formData.doctorEmail}
+                  onChange={(e) => setFormData({ ...formData, doctorEmail: e.target.value })}
+                  className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 appearance-none"
+                >
+                  <option value="">Choose a doctor</option>
+                  {doctors.map(d => (
+                    <option key={d.email} value={d.email}>{d.specialization} - {d.email}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
                 <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Select Date</label>
                 <input 
                   type="date" 
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900"
+                  value={formData.appointmentDate}
+                  onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
+                  className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600"
                 />
-              </div>
-              <div className="space-y-4">
-                <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Select Time Slot</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {timeSlots.map(t => (
-                    <button
-                      key={t}
-                      onClick={() => setTime(t)}
-                      className={cn(
-                        "p-3 rounded-xl text-sm font-bold transition-all",
-                        time === t ? "bg-blue-600 text-white shadow-md shadow-blue-100" : "bg-zinc-50 border border-zinc-100 text-zinc-600 hover:border-blue-200"
-                      )}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
             <button 
-              onClick={handleNext} 
-              disabled={!date || !time}
-              className="w-full py-5 bg-zinc-900 text-white rounded-[24px] font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+              onClick={() => setStep(2)} 
+              disabled={!formData.doctorEmail || !formData.appointmentDate}
+              className="w-full py-5 bg-zinc-900 text-white rounded-[24px] font-bold disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all"
             >
               Continue to Details <ArrowRight size={18} />
             </button>
@@ -67,20 +101,29 @@ export default function AppointmentBookingPage() {
 
         {step === 2 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-            <h2 className="text-3xl font-bold text-zinc-900">Patient Details</h2>
+            <h2 className="text-3xl font-bold text-zinc-900">Patient Information</h2>
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Full Name</label>
-                <input type="text" placeholder="John Doe" className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Symptons/Reason for Visit</label>
-                <textarea rows={4} placeholder="Describe your symptoms..." className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none" />
+                <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Patient Email</label>
+                <input 
+                  type="email" 
+                  placeholder="patient@example.com"
+                  readOnly={user?.role === "USER"}
+                  value={formData.patientEmail}
+                  onChange={(e) => setFormData({ ...formData, patientEmail: e.target.value })}
+                  className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-70" 
+                />
+                {user?.role === "RECEPTION" && <p className="text-xs text-zinc-400">Enter the email of the registered patient.</p>}
               </div>
             </div>
-            <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100">
-              Book Appointment <ArrowRight size={18} />
+            <button 
+              onClick={handleBooking} 
+              disabled={loading || !formData.patientEmail}
+              className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : <>Book Appointment <CheckCircle2 size={18} /></>}
             </button>
+            <button onClick={() => setStep(1)} className="w-full text-sm font-bold text-zinc-400 hover:text-zinc-900 transition-colors">Go Back</button>
           </motion.div>
         )}
 
@@ -89,9 +132,9 @@ export default function AppointmentBookingPage() {
             <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8">
               <CheckCircle2 size={48} />
             </div>
-            <h2 className="text-3xl font-bold text-zinc-900 mb-4">Request Sent!</h2>
-            <p className="text-zinc-500 mb-12">Waiting for Dr. Sarah Johnson to confirm your appointment on <span className="text-zinc-900 font-bold">{date}</span> at <span className="text-zinc-900 font-bold">{time}</span>.</p>
-            <Link href="/dashboard" className="inline-block px-12 py-5 bg-blue-600 text-white rounded-[24px] font-bold shadow-xl shadow-blue-100">
+            <h2 className="text-3xl font-bold text-zinc-900 mb-4">Success!</h2>
+            <p className="text-zinc-500 mb-12">Your appointment request for <span className="text-zinc-900 font-bold">{formData.appointmentDate}</span> has been sent successfully.</p>
+            <Link href={user?.role === "ADMIN" ? "/admin" : "/dashboard"} className="inline-block px-12 py-5 bg-blue-600 text-white rounded-[24px] font-bold shadow-xl shadow-blue-100">
                Go to Dashboard
             </Link>
           </motion.div>
@@ -114,5 +157,3 @@ function StepIcon({ num, active, current, label }) {
     </div>
   );
 }
-
-import Link from "next/link";

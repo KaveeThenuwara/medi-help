@@ -13,7 +13,7 @@ export default function Footer() {
               Medi<span className="text-blue-600">Help</span>
             </Link>
             <p className="text-zinc-500 leading-relaxed text-sm">
-              Providing modern, accessible healthcare solutions for everyone. Your health is our priority, and we're here to help you every step of the way.
+              Providing modern, accessible healthcare solutions for everyone. Your health is our priority, and we&apos;re here to help you every step of the way.
             </p>
             <div className="flex items-center gap-4">
               <SocialIcon icon={<Facebook size={18} />} />

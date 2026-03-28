@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { Menu, X, User, LogOut, LayoutDashboard, Calendar, Search } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, logout } = useAuth();
   const { scrollY } = useScroll();
   
   const borderRadius = useTransform(scrollY, [0, 50], [0, 32]);
@@ -15,8 +16,15 @@ export default function Navbar() {
   const top = useTransform(scrollY, [0, 50], [0, 16]);
   const shadow = useTransform(scrollY, [0, 50], ["none", "0 10px 30px rgba(0,0,0,0.05)"]);
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState("user");
+  const getDashboardLink = () => {
+    if (!user) return "/dashboard";
+    switch (user.role) {
+      case "ADMIN": return "/admin";
+      case "DOCTOR": return "/dashboard/doctor";
+      case "RECEPTION": return "/dashboard/reception";
+      default: return "/dashboard";
+    }
+  };
 
   return (
     <motion.nav
@@ -33,24 +41,25 @@ export default function Navbar() {
           Medi<span className="text-blue-600">Help</span>
         </Link>
         <div className="hidden md:flex items-center gap-6">
-          <Link href="/doctors" className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">Find Doctors</Link>
-          <Link href="/appointments" className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">Appointments</Link>
+          <Link href="/doctors" className="text-sm font-medium text-zinc-600 hover:text-blue-600 transition-colors">Find Doctors</Link>
+          <Link href="/appointments" className="text-sm font-medium text-zinc-600 hover:text-blue-600 transition-colors">Appointments</Link>
         </div>
       </div>
 
       <div className="hidden md:flex items-center gap-4">
-        {isLoggedIn ? (
+        {user ? (
           <div className="flex items-center gap-4">
             <Link 
-              href={userRole === "admin" ? "/admin" : "/dashboard"}
+              href={getDashboardLink()}
               className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md shadow-blue-100"
             >
               <LayoutDashboard size={16} />
               Dashboard
             </Link>
             <button 
-              onClick={() => setIsLoggedIn(false)}
-              className="p-2 text-zinc-500 hover:text-zinc-900 transition-colors"
+              onClick={logout}
+              className="p-2 text-zinc-500 hover:text-red-500 transition-colors"
+              title="Logout"
             >
               <LogOut size={20} />
             </button>
@@ -81,8 +90,17 @@ export default function Navbar() {
           <Link href="/doctors" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Find Doctors</Link>
           <Link href="/appointments" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Appointments</Link>
           <div className="h-px bg-zinc-100 my-2" />
-          <Link href="/login" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Login</Link>
-          <Link href="/register" className="text-lg font-medium text-blue-600" onClick={() => setIsOpen(false)}>Sign Up</Link>
+          {user ? (
+            <>
+              <Link href={getDashboardLink()} className="text-lg font-medium" onClick={() => setIsOpen(false)}>Dashboard</Link>
+              <button onClick={() => { logout(); setIsOpen(false); }} className="text-lg font-medium text-red-500 text-left">Logout</button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Login</Link>
+              <Link href="/register" className="text-lg font-medium text-blue-600" onClick={() => setIsOpen(false)}>Sign Up</Link>
+            </>
+          )}
         </motion.div>
       )}
     </motion.nav>
