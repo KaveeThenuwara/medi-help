@@ -86,15 +86,7 @@ src/
     └── api.js            # API client
 ```
 
-## Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
 
-## Deployment
-
-The easiest way to deploy this Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
 
 For more details, check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying).
