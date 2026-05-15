@@ -2,25 +2,17 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Send, X, Bot, User, Loader2 } from "lucide-react";
+import { MessageSquare, Send, X, Bot, User, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const symptomCheck = (input) => {
-  const text = input.toLowerCase();
-  if (text.includes("fever") && text.includes("cough")) return "You might have a common cold or flu. Please stay hydrated and rest. If symptoms persist, consult a doctor.";
-  if (text.includes("headache") && text.includes("nausea")) return "This could be a migraine. Ensure you are in a dark, quiet room. If it's severe, seek medical attention.";
-  if (text.includes("stomach") && text.includes("pain")) return "Abdominal pain can be caused by many things. If it's sharp or persistent, please see a specialist.";
-  if (text.includes("chest pain") || text.includes("breath")) return "URGENT: Chest pain or difficulty breathing can be serious. Please contact emergency services immediately.";
-  return "I'm not exactly sure what that could be. It's best to book an appointment with one of our specialists for an accurate diagnosis.";
-};
 
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: "bot", text: "Hello! I'm your MediHelp AI assistant. Tell me your symptoms and I'll try to help." }
+    { role: "bot", text: "Hello! I'm your MediHelp AI assistant powered by LangChain RAG. Tell me your symptoms and I'll help you." }
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [error, setError] = useState(null);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -32,16 +24,38 @@ export default function ChatBot() {
   const handleSend = async () => {
     if (!input.trim()) return;
 
+    setError(null);
     const userMessage = { role: "user", text: input };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsTyping(true);
 
-    setTimeout(() => {
-      const response = symptomCheck(input);
-      setMessages(prev => [...prev, { role: "bot", text: response }]);
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: input,
+          conversationHistory: messages
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to get response");
+      }
+
+      const data = await response.json();
+      setMessages(prev => [...prev, { role: "bot", text: data.message }]);
+    } catch (err) {
+      setError(err.message);
+      setMessages(prev => [...prev, { 
+        role: "bot", 
+        text: `Sorry, I encountered an error: ${err.message}. Please check if you have set the OPEN_AI_API_KEY environment variable.` 
+      }]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -60,7 +74,7 @@ export default function ChatBot() {
                   <Bot size={18} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-zinc-900">Medi AI Console</h3>
+                  <h3 className="text-sm font-semibold text-zinc-900">Medi AI Console (OpenAI)</h3>
                   <div className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Online</span>
@@ -74,6 +88,13 @@ export default function ChatBot() {
                 <X size={20} />
               </button>
             </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 border-b border-red-200 flex items-center gap-2 text-red-700 text-sm">
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
 
             <div 
               ref={scrollRef}
@@ -114,11 +135,13 @@ export default function ChatBot() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSend()}
                   placeholder="Describe your symptoms..."
-                  className="w-full pl-4 pr-12 py-3 bg-zinc-100 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                  disabled={isTyping}
+                  className="w-full pl-4 pr-12 py-3 bg-zinc-100 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none disabled:opacity-50"
                 />
                 <button
                   onClick={handleSend}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-colors"
+                  disabled={isTyping || !input.trim()}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send size={18} />
                 </button>

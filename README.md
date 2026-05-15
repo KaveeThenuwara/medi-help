@@ -1,36 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# MediHelp
 
-## Getting Started
+A healthcare appointment and user management web app built with Next.js, Tailwind CSS, React, and Framer Motion.
 
-First, run the development server:
+## Overview
+
+MediHelp is a patient-facing medical platform that enables users to:
+
+- Browse and find verified doctors
+- Book appointments quickly
+- Register and authenticate with email verification
+- Access role-based dashboards for admins, doctors, receptionists, and patients
+- View live statistics and appointment summaries
+
+## Key Features
+
+- Modern, responsive UI with Tailwind CSS and Framer Motion
+- Email-based registration with OTP verification
+- Secure authentication using JWT stored in `localStorage`
+- Role-based navigation and dashboard redirects
+- REST API integration via `src/service/api.js`
+
+## Tech Stack
+
+- Next.js 16
+- React 19
+- Tailwind CSS v4
+- Framer Motion
+- lucide-react icons
+- react-toastify
+
+## App Structure
+
+Important app paths:
+
+- `/` - Landing page
+- `/login` - Login form
+- `/register` - Registration with email OTP verification
+- `/doctors` - Doctor search/listing
+- `/appointments` - Appointment overview
+- `/appointments/new` - New appointment booking
+- `/admin` - Admin dashboard
+- `/dashboard/doctor` - Doctor dashboard
+- `/dashboard/reception` - Reception dashboard
+- `/dashboard` - Patient dashboard
+
+## Authentication Flow
+
+The app uses `AuthContext` in `src/lib/AuthContext.js` for client-side auth. After successful login or registration, the user is redirected based on role:
+
+- `ADMIN` → `/admin`
+- `DOCTOR` → `/dashboard/doctor`
+- `RECEPTION` → `/dashboard/reception`
+- other users → `/dashboard`
+
+## API Integration
+
+The client uses `src/service/api.js` to call the backend.
+
+Example of public request without token:
+
+```js
+import { apiClientWithOuttoken } from '@/service/api';
+
+const res = await apiClientWithOuttoken('/auth/authenticate', 'POST', {
+  email: 'user@example.com',
+  password: 'password123',
+});
+```
+
+Example of authenticated request:
+
+```js
+import { apiClient } from '@/service/api';
+
+const res = await apiClient('/admin/reports/summary');
+```
+
+## Environment Variables
+
+Create a `.env.local` file in the project root and configure the backend URL:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8081/api/v1
+```
+
+If this variable is not set, the app defaults to `http://localhost:8081/api/v1`.
+
+## Run Locally
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Build for production:
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```bash
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Start the production server:
 
-## Learn More
+```bash
+npm run start
+```
 
-To learn more about Next.js, take a look at the following resources:
+Run ESLint:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run lint
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Usage Notes
 
-## Deploy on Vercel
+- `src/app/login/page.js` handles login and uses the `/auth/authenticate` endpoint.
+- `src/app/register/page.js` sends a registration code, verifies it, then creates a new user.
+- `src/app/page.js` fetches live stats from `/admin/reports/summary`.
+- `src/components/Navbar.jsx` renders login, signup, and dashboard links based on auth state.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app/` - Next.js app routes and pages
+- `src/components/` - Shared UI components
+- `src/lib/` - Auth context and utility logic
+- `src/service/` - API client wrapper
+
+## Notes
+
+This frontend expects a running backend API at the configured base URL. If you need to connect to a different backend, update `NEXT_PUBLIC_API_BASE_URL`.
+
+---
+
+Happy hacking! 🚀

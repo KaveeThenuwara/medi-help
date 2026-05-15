@@ -28,6 +28,10 @@ export default function RegisterPage() {
       toast.error("Password must be at least 6 characters");
       return;
     }
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     setLoading(true);
     try {
       const res = await apiClientWithOuttoken("/auth/send-register-code", "POST", { email: formData.email });
